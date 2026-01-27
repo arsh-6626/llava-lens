@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Logit Lens - Dark Mode</title>
+    <style>
+        :root { 
+            --sidebar-width: 380px; 
+            --primary: #60a5fa;      /* Neon Blue */
+            --primary-dim: rgba(96, 165, 250, 0.15);
+            --bg: #0f172a;           /* Slate 900 */
+            --sidebar-bg: #1e293b;   /* Slate 800 */
+            --text-main: #f1f5f9;    /* Slate 100 */
+            --text-muted: #94a3b8;   /* Slate 400 */
+            --border: #334155;       /* Slate 700 */
+            --hover: #334155;
+            --header-bg: #1e293b;    /* Sticky header bg */
+        }
+        
+        body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: var(--bg); display: flex; height: 100vh; overflow: hidden; color: var(--text-main); }
+        
+        /* SIDEBAR */
+        .sidebar { width: var(--sidebar-width); background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 50; box-shadow: 4px 0 20px rgba(0,0,0,0.3); }
+        .sidebar-header { padding: 20px; border-bottom: 1px solid var(--border); background: var(--sidebar-bg); }
+        .sidebar-header h2 { margin: 0 0 5px 0; font-size: 18px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
+        .meta-info { font-size: 12px; color: var(--text-muted); font-family: monospace; }
+        
+        .controls { padding: 15px; background: #0f172a; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px; }
+        .search-box { 
+            width: 100%; padding: 10px; background: #1e293b; border: 1px solid var(--border); 
+            border-radius: 6px; font-size: 14px; color: white; box-sizing: border-box; transition: all 0.2s; 
+        }
+        .search-box:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px var(--primary-dim); }
+        
+        /* TOGGLES */
+        .toggle-group { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 500; color: var(--text-muted); }
+        .toggle-switch { position: relative; display: inline-block; width: 36px; height: 20px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #475569; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(16px); }
+
+        /* IMAGE PREVIEW */
+        .image-wrapper { padding: 20px; flex: 1; display: flex; flex-direction: column; align-items: center; overflow-y: auto; background: var(--sidebar-bg); }
+        .img-container { position: relative; width: 336px; height: 336px; box-shadow: 0 10px 20px rgba(0,0,0,0.4); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+        .highlight-box { position: absolute; border: 2px solid #ef4444; background: rgba(239, 68, 68, 0.25); display: none; pointer-events: none; z-index: 10; box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+        .prompt-box { margin-top: 15px; padding: 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; line-height: 1.5; color: var(--text-muted); width: 100%; box-sizing: border-box; }
+
+        /* TABLE AREA */
+        .main-content { flex: 1; overflow: auto; position: relative; display: flex; flex-direction: column; background: var(--bg); }
+        table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        
+        /* CELLS */
+        th, td { padding: 0 12px; height: 32px; font-size: 12px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); white-space: nowrap; cursor: default; }
+        
+        /* STICKY HEADERS */
+        thead th { position: sticky; top: 0; background: var(--header-bg); z-index: 20; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid var(--border); }
+        .row-header { position: sticky; left: 0; background: var(--header-bg); z-index: 15; font-weight: 600; text-align: right; min-width: 140px; max-width: 220px; border-right: 2px solid var(--border); overflow: hidden; text-overflow: ellipsis; color: var(--text-main); }
+        .corner-header { position: sticky; left: 0; top: 0; z-index: 30; background: var(--header-bg); border-bottom: 2px solid var(--border); border-right: 2px solid var(--border); }
+
+        /* INTERACTIVITY */
+        tr:hover td { background-color: var(--hover); }
+        .cell-hover { outline: 2px solid var(--primary); outline-offset: -2px; z-index: 5; position: relative; box-shadow: 0 0 10px rgba(96, 165, 250, 0.3); }
+        
+        /* SEARCH MATCHES */
+        .search-match { background-color: #f59e0b !important; color: #000; font-weight: 800; }
+        .search-match-row th { background-color: #78350f; color: #fbbf24; border-right-color: #fbbf24; }
+        
+        .image-row { display: none; }
+
+        /* HEATMAP */
+        .conf-low { color: #64748b; } 
+        .conf-med { color: #94a3b8; }
+        .conf-high { color: #fff; font-weight: 600; text-shadow: 0 0 5px rgba(255,255,255,0.2); }
+
+        /* TOOLTIP */
+        #tooltip { 
+            position: fixed; background: rgba(15, 23, 42, 0.95); color: white; padding: 12px; border-radius: 8px; 
+            font-size: 12px; pointer-events: none; z-index: 100; display: none; 
+            border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); backdrop-filter: blur(8px); min-width: 200px; 
+        }
+        .tt-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .tt-bar-bg { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-bottom: 10px; }
+        .tt-bar-fill { height: 100%; background: var(--primary); border-radius: 2px; box-shadow: 0 0 5px var(--primary); }
+        .tt-header { font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px; color: var(--primary); }
+
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="sidebar-header">
+        <h2>Logit Lens Dashboard</h2>
+        <div class="meta-info">Model: MODELNAME_PLACEHOLDER</div>
+    </div>
+    
+    <div class="controls">
+        <input type="text" id="searchInput" class="search-box" placeholder="🔍 Search tokens (e.g., 'cat')..." onkeyup="handleSearch()">
+        
+        <div class="toggle-group">
+            <span>Show Image Tokens</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="toggleImg" onchange="toggleImageTokens()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        
+        <div class="toggle-group">
+            <span>Confidence Heatmap</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="toggleHeatmap" checked onchange="updateHeatmap()">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <div class="image-wrapper">
+        <div class="img-container">
+            <img src="data:image/png;base64,IMAGE_PLACEHOLDER" width="336" height="336">
+            <div class="highlight-box"></div>
+        </div>
+        <div class="prompt-box">
+            <strong style="color:white">Prompt:</strong><br>
+            PROMPT_PLACEHOLDER
+        </div>
+    </div>
+</div>
+
+<div class="main-content">
+    <table id="logitTable">
+        <thead>
+            <tr id="headerRow">
+                <th class="corner-header">Input Token</th>
+                </tr>
+        </thead>
+        <tbody id="tableBody">
+            </tbody>
+    </table>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+    const layerData = DATA_PLACEHOLDER; 
+    const tokenLabels = LABELS_PLACEHOLDER;
+    const isImageToken = MASK_PLACEHOLDER;
+    
+    const imageSize = 336;
+    const patchSize = 14;
+    const gridSize = imageSize / patchSize;
+    const numLayers = layerData.length;
+    const numTokens = tokenLabels.length;
+
+    const tableBody = document.getElementById('tableBody');
+    const headerRow = document.getElementById('headerRow');
+    const tooltip = document.getElementById('tooltip');
+    const highlightBox = document.querySelector('.highlight-box');
+    const imgContainer = document.querySelector('.img-container');
+
+    function init() {
+        // Headers
+        for(let i=0; i<numLayers; i++) {
+            const th = document.createElement('th');
+            th.textContent = i+1;
+            th.title = `Layer ${i+1}`;
+            headerRow.appendChild(th);
+        }
+
+        // Rows
+        for(let t=0; t<numTokens; t++) {
+            const tr = document.createElement('tr');
+            tr.id = `row-${t}`;
+            
+            // Row Header
+            const th = document.createElement('th');
+            th.className = 'row-header';
+            th.textContent = tokenLabels[t];
+            th.title = tokenLabels[t];
+            tr.appendChild(th);
+
+            if(isImageToken[t]) {
+                tr.classList.add('image-row');
+                tr.style.display = 'none'; 
+            }
+
+            // Cells
+            for(let l=0; l<numLayers; l++) {
+                const td = document.createElement('td');
+                const cell = layerData[l][t];
+                td.textContent = cell.t; 
+                
+                td.dataset.prob = cell.p;
+                td.dataset.token = cell.t.toLowerCase(); 
+                
+                td.addEventListener('mouseenter', (e) => showTooltip(e, l, t));
+                td.addEventListener('mouseleave', hideTooltip);
+                tr.appendChild(td);
+            }
+            
+            tr.addEventListener('mouseenter', () => highlightImagePatch(t));
+            tr.addEventListener('mouseleave', hideHighlight);
+            tableBody.appendChild(tr);
+        }
+        updateHeatmap();
+    }
+
+    function handleSearch() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const rows = tableBody.getElementsByTagName('tr');
+        
+        document.querySelectorAll('.search-match').forEach(el => el.classList.remove('search-match'));
+        document.querySelectorAll('.search-match-row').forEach(el => el.classList.remove('search-match-row'));
+
+        if(!query) return;
+
+        for(let row of rows) {
+            const headerText = row.querySelector('th').textContent.toLowerCase();
+            if(headerText.includes(query)) {
+                row.classList.add('search-match-row');
+            }
+
+            const cells = row.querySelectorAll('td');
+            for(let cell of cells) {
+                if(cell.dataset.token.includes(query)) {
+                    cell.classList.add('search-match');
+                }
+            }
+        }
+    }
+
+    function toggleImageTokens() {
+        const show = document.getElementById('toggleImg').checked;
+        const imgRows = document.querySelectorAll('.image-row');
+        imgRows.forEach(row => {
+            row.style.display = show ? 'table-row' : 'none';
+        });
+    }
+
+    function updateHeatmap() {
+        const active = document.getElementById('toggleHeatmap').checked;
+        const cells = document.querySelectorAll('td');
+        
+        cells.forEach(cell => {
+            if(!active) {
+                cell.style.backgroundColor = '';
+                cell.className = '';
+                return;
+            }
+            
+            const p = parseFloat(cell.dataset.prob);
+            // Dark Mode Heatmap: Uses Blue Transparency
+            // 0% prob -> 0 alpha. 100% prob -> 0.4 alpha (visible but readable)
+            const alpha = Math.max(0.0, p * 0.4); 
+            cell.style.backgroundColor = `rgba(59, 130, 246, ${alpha})`;
+            
+            if(p > 0.8) cell.classList.add('conf-high');
+            else if(p > 0.3) cell.classList.add('conf-med');
+            else cell.classList.add('conf-low');
+        });
+    }
+
+    function showTooltip(e, layerIdx, tokenIdx) {
+        const data = layerData[layerIdx][tokenIdx];
+        const rect = e.target.getBoundingClientRect();
+        
+        let html = `<div class="tt-header">L${layerIdx+1} • ${tokenLabels[tokenIdx]}</div>`;
+        
+        data.d.forEach(item => {
+            const [txt, prob] = item;
+            const percent = (prob * 100).toFixed(1);
+            html += `
+                <div class="tt-row">
+                    <span>${txt}</span> 
+                    <span style="color:#94a3b8">${percent}%</span>
+                </div>
+                <div class="tt-bar-bg">
+                    <div class="tt-bar-fill" style="width:${percent}%"></div>
+                </div>
+            `;
+        });
+
+        tooltip.innerHTML = html;
+        tooltip.style.display = 'block';
+        
+        const tipWidth = 220; 
+        let left = rect.right + 15;
+        let top = rect.top;
+
+        if(left + tipWidth > window.innerWidth) left = rect.left - tipWidth - 15;
+        if(top + 200 > window.innerHeight) top = window.innerHeight - 200; 
+
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+
+        e.target.classList.add('cell-hover');
+    }
+
+    function hideTooltip(e) {
+        tooltip.style.display = 'none';
+        if(e && e.target) e.target.classList.remove('cell-hover');
+    }
+
+    function highlightImagePatch(tokenIdx) {
+        const label = tokenLabels[tokenIdx];
+        if(!label || !label.startsWith('<IMG')) {
+            hideHighlight();
+            return;
+        }
+        
+        const patchStr = label.replace('<IMG', '').replace('>', '');
+        const patchId = parseInt(patchStr);
+        if(isNaN(patchId)) return;
+
+        const idx = patchId - 1; 
+        const row = Math.floor(idx / gridSize);
+        const col = idx % gridSize;
+        
+        highlightBox.style.width = patchSize + 'px';
+        highlightBox.style.height = patchSize + 'px';
+        highlightBox.style.left = (col * patchSize) + 'px';
+        highlightBox.style.top = (row * patchSize) + 'px';
+        highlightBox.style.display = 'block';
+    }
+
+    function hideHighlight() {
+        highlightBox.style.display = 'none';
+    }
+
+    imgContainer.addEventListener('mousemove', (e) => {
+        if(!document.getElementById('toggleImg').checked) return;
+
+        const rect = imgContainer.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        const col = Math.floor(x / patchSize);
+        const row = Math.floor(y / patchSize);
+        
+        if(col >= gridSize || row >= gridSize) return;
+
+        const patchIdx = (row * gridSize) + col + 1; 
+        const label = `<IMG${patchIdx.toString().padStart(3, '0')}>`;
+        const tokenIdx = tokenLabels.indexOf(label);
+        
+        if(tokenIdx !== -1) {
+            highlightImagePatch(tokenIdx); 
+        }
+    });
+
+    imgContainer.addEventListener('mouseleave', hideHighlight);
+
+    init();
+
+</script>
+</body>
+</html>
