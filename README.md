@@ -1,3 +1,5 @@
+# LLAVA-LENS
+
 ## Overview
 This project focuses on improving attention to fine-grained details in Vision-Language Models (VLMs) using the Logit Lens. Instead of relying only on final predictions, it inspects intermediate transformer representations to understand how semantic concepts like blood or injury emerge across layers. The goal is to improve classification in tasks where subtle visual cues matter more than dominant objects, such as trauma detection.
 
@@ -32,6 +34,11 @@ Steps:
 ├── get_embeds.py  
 ├── result.html  
 ```
+
+## Output_Sample
+
+<img width="1496" height="751" alt="image" src="https://github.com/user-attachments/assets/a0d73c1b-8436-4dcc-8df0-b12d17312f75" />
+
 ## Author
 Arsh Abbas Naqvi 
 Delhi Technological University
