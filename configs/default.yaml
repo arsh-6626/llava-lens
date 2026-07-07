@@ -1,0 +1,58 @@
+# Default configuration for llava-lens
+
+app:
+  name: "llava-lens"
+  version: "2.0.0"
+  debug: false
+
+model:
+  name: "llava-hf/llava-1.5-7b-hf"
+  device: "auto"
+  torch_dtype: "float16"
+  load_in_4bit: false
+  load_in_8bit: false
+  image_size: 336
+  patch_size: 14
+
+analysis:
+  logit_lens:
+    top_k: 5
+    confidence_threshold: 0.01
+  attention:
+    head_aggregation: "mean"  # mean, max, sum
+    layer_aggregation: "last"  # last, mean, sum
+  patch_selection:
+    high_confidence_threshold: 0.01
+    neighbor_context: 2
+    min_patches: 10
+
+processing:
+  batch_size: 1
+  num_workers: 4
+  max_queue_size: 100
+  timeout: 300
+
+storage:
+  base_dir: "./data"
+  raw_dir: "raw"
+  processed_dir: "processed"
+  embeddings_dir: "embeddings"
+  results_dir: "results"
+  cache_enabled: true
+  cache_dir: ".cache"
+
+tracking:
+  enabled: true
+  db_path: "./data/tracking.db"
+  auto_track: true
+
+visualization:
+  template_dir: "./templates"
+  output_format: "html"
+  image_size: 336
+
+web:
+  host: "0.0.0.0"
+  port: 8000
+  cors_origins: ["*"]
+  max_upload_size: 52428800  # 50MB

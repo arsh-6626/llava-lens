@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "llava-lens"
+version = "2.0.0"
+description = "Logit Lens analysis for Vision-Language Models - Research Platform"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "Arsh Abbas Naqvi", email = "arsh@example.com"}
+]
+keywords = ["vlm", "llava", "logit-lens", "interpretability", "trauma-detection"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "torch>=2.0.0",
+    "transformers>=4.35.0",
+    "accelerate>=0.24.0",
+    "bitsandbytes>=0.41.0",
+    "Pillow>=10.0.0",
+    "numpy>=1.24.0",
+    "pydantic>=2.0.0",
+    "pyyaml>=6.0",
+    "click>=8.1.0",
+    "rich>=13.0.0",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "jinja2>=3.1.0",
+    "python-multipart>=0.0.6",
+    "aiofiles>=23.0.0",
+    "tqdm>=4.66.0",
+    "joblib>=1.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "mypy>=1.7.0",
+    "pre-commit>=3.5.0",
+]
+
+[project.scripts]
+llava-lens = "llava_lens.cli.app:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
