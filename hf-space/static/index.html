@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLAVA-LENS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: #0a0a0f; color: #e2e8f0; min-height: 100vh; }
+
+        .nav { position: fixed; top: 0; left: 0; right: 0; height: 56px; background: rgba(10,10,15,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; z-index: 100; }
+        .nav-brand { font-size: 16px; font-weight: 700; letter-spacing: -0.5px; }
+        .nav-brand span { color: #818cf8; }
+        .nav-status { font-size: 11px; padding: 4px 10px; border-radius: 12px; background: rgba(34,197,94,0.15); color: #22c55e; }
+
+        .main { padding-top: 56px; min-height: 100vh; }
+
+        .upload-section { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 56px); padding: 40px; }
+        .upload-box { width: 100%; max-width: 640px; text-align: center; }
+        .upload-zone { border: 2px dashed rgba(129,140,248,0.3); border-radius: 16px; padding: 60px 40px; cursor: pointer; transition: all 0.3s; background: rgba(129,140,248,0.03); }
+        .upload-zone:hover { border-color: #818cf8; background: rgba(129,140,248,0.06); }
+        .upload-zone.dragover { border-color: #818cf8; background: rgba(129,140,248,0.1); transform: scale(1.01); }
+        .upload-icon { width: 64px; height: 64px; margin: 0 auto 20px; border-radius: 16px; background: rgba(129,140,248,0.1); display: flex; align-items: center; justify-content: center; }
+        .upload-icon svg { width: 32px; height: 32px; stroke: #818cf8; }
+        .upload-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+        .upload-subtitle { font-size: 14px; color: #64748b; }
+
+        .controls { display: flex; gap: 12px; margin-top: 24px; }
+        .input-wrap { flex: 1; position: relative; }
+        .input-wrap label { position: absolute; top: -8px; left: 12px; font-size: 10px; color: #64748b; background: #0a0a0f; padding: 0 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .input-wrap input { width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; color: #e2e8f0; font-size: 14px; outline: none; transition: border-color 0.2s; }
+        .input-wrap input:focus { border-color: #818cf8; }
+
+        .analyze-btn { padding: 14px 28px; background: #818cf8; color: #0a0a0f; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        .analyze-btn:hover { background: #a5b4fc; transform: translateY(-1px); }
+        .analyze-btn:disabled { background: #334155; color: #64748b; cursor: not-allowed; transform: none; }
+
+        .preview-wrap { margin-top: 24px; display: none; }
+        .preview-img { max-width: 320px; max-height: 320px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); }
+
+        .loading { display: none; margin-top: 32px; text-align: center; }
+        .spinner { width: 40px; height: 40px; border: 3px solid rgba(129,140,248,0.2); border-top-color: #818cf8; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { font-size: 13px; color: #64748b; }
+
+        .dashboard { display: none; }
+        .dash-layout { display: flex; height: calc(100vh - 56px); }
+        .dash-sidebar { width: 380px; background: rgba(15,15,25,0.8); border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; overflow-y: auto; }
+        .dash-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .dash-header h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+        .dash-header .model-tag { font-size: 11px; color: #64748b; font-family: monospace; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 6px; display: inline-block; margin-top: 8px; }
+
+        .dash-controls { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 12px; }
+        .toggle-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #94a3b8; }
+        .toggle { width: 40px; height: 22px; background: #334155; border-radius: 11px; position: relative; cursor: pointer; transition: background 0.2s; }
+        .toggle.active { background: #818cf8; }
+        .toggle::after { content: ''; position: absolute; width: 18px; height: 18px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: transform 0.2s; }
+        .toggle.active::after { transform: translateX(18px); }
+
+        .dash-image { padding: 20px; flex: 1; display: flex; flex-direction: column; align-items: center; overflow-y: auto; }
+        .img-container { position: relative; width: 336px; height: 336px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .img-container img { width: 100%; height: 100%; object-fit: cover; }
+        .patch-highlight { position: absolute; border: 2px solid #ef4444; background: rgba(239,68,68,0.2); pointer-events: none; display: none; box-shadow: 0 0 12px rgba(239,68,68,0.4); }
+        .prompt-display { margin-top: 16px; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; font-size: 13px; color: #94a3b8; width: 100%; line-height: 1.5; }
+
+        .dash-main { flex: 1; overflow: auto; padding: 0; }
+        .dash-table { border-collapse: collapse; width: 100%; font-size: 12px; }
+        .dash-table th, .dash-table td { padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); border-right: 1px solid rgba(255,255,255,0.04); white-space: nowrap; }
+        .dash-table thead th { position: sticky; top: 0; background: #0a0a0f; z-index: 10; font-weight: 600; color: #64748b; border-bottom: 2px solid rgba(255,255,255,0.08); }
+        .dash-table .row-hdr { position: sticky; left: 0; background: #0a0a0f; z-index: 5; font-weight: 500; text-align: right; min-width: 130px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; border-right: 2px solid rgba(255,255,255,0.08); color: #e2e8f0; }
+        .dash-table tr:hover td { background: rgba(129,140,248,0.05); }
+        .dash-table .img-row { display: none; }
+        .dash-table td { cursor: default; }
+        .dash-table td:hover { outline: 1px solid #818cf8; outline-offset: -1px; }
+
+        .conf-high { color: #fff; font-weight: 600; }
+        .conf-med { color: #94a3b8; }
+        .conf-low { color: #475569; }
+
+        .tooltip { position: fixed; background: rgba(10,10,15,0.95); color: white; padding: 14px; border-radius: 10px; font-size: 12px; pointer-events: none; z-index: 1000; display: none; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.5); min-width: 220px; backdrop-filter: blur(8px); }
+        .tooltip-header { font-weight: 600; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); color: #818cf8; }
+        .tooltip-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .tooltip-row span:last-child { color: #64748b; }
+        .tooltip-bar { height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-bottom: 10px; }
+        .tooltip-fill { height: 100%; background: #818cf8; border-radius: 2px; }
+
+        .back-btn { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; background: rgba(129,140,248,0.15); color: #818cf8; border: 1px solid rgba(129,140,248,0.3); border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; z-index: 50; display: none; }
+        .back-btn:hover { background: rgba(129,140,248,0.25); }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-brand"><span>LLAVA</span>-LENS</div>
+        <div class="nav-status" id="statusBadge">Connecting...</div>
+    </nav>
+
+    <main class="main">
+        <section class="upload-section" id="uploadSection">
+            <div class="upload-box">
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <path d="m21 15-5-5L5 21"/>
+                        </svg>
+                    </div>
+                    <div class="upload-title">Drop an image or click to upload</div>
+                    <div class="upload-subtitle">JPG, PNG, BMP supported</div>
+                </div>
+                <input type="file" id="fileInput" accept="image/*" hidden>
+                <div class="controls">
+                    <div class="input-wrap">
+                        <label>Prompt</label>
+                        <input type="text" id="promptInput" value="Describe the image.">
+                    </div>
+                    <button class="analyze-btn" id="analyzeBtn" disabled>Analyze</button>
+                </div>
+                <div class="preview-wrap" id="previewWrap">
+                    <img class="preview-img" id="previewImg">
+                </div>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Running Logit Lens analysis on GPU...</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="dashboard" id="dashboard">
+            <div class="dash-layout">
+                <div class="dash-sidebar">
+                    <div class="dash-header">
+                        <h2>Analysis Results</h2>
+                        <div class="model-tag" id="modelTag"></div>
+                    </div>
+                    <div class="dash-controls">
+                        <div class="toggle-row">
+                            <span>Show Image Tokens</span>
+                            <div class="toggle" id="toggleImg"></div>
+                        </div>
+                        <div class="toggle-row">
+                            <span>Confidence Heatmap</span>
+                            <div class="toggle active" id="toggleHeat"></div>
+                        </div>
+                    </div>
+                    <div class="dash-image">
+                        <div class="img-container" id="imgContainer">
+                            <img id="resultImg">
+                            <div class="patch-highlight" id="patchHighlight"></div>
+                        </div>
+                        <div class="prompt-display" id="promptDisplay"></div>
+                    </div>
+                </div>
+                <div class="dash-main" id="dashMain">
+                    <table class="dash-table">
+                        <thead><tr id="tableHead"><th class="row-hdr">Token</th></tr></thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div class="tooltip" id="tooltip"></div>
+    <button class="back-btn" id="backBtn">New Analysis</button>
+
+    <input type="file" id="fileInput" accept="image/*" hidden>
+
+    <script>
+    const $ = s => document.querySelector(s);
+    const $$ = s => document.querySelectorAll(s);
+
+    let data = null;
+    let showImgTokens = false;
+    let heatmapOn = true;
+
+    fetch('/api/health').then(r => r.json()).then(d => {
+        $('#statusBadge').textContent = 'GPU Ready';
+        $('#statusBadge').style.background = 'rgba(34,197,94,0.15)';
+        $('#statusBadge').style.color = '#22c55e';
+    }).catch(() => {
+        $('#statusBadge').textContent = 'Offline';
+        $('#statusBadge').style.background = 'rgba(239,68,68,0.15)';
+        $('#statusBadge').style.color = '#ef4444';
+    });
+
+    const zone = $('#uploadZone');
+    const fileInput = $('#fileInput');
+    const analyzeBtn = $('#analyzeBtn');
+    let selectedFile = null;
+
+    zone.addEventListener('click', () => fileInput.click());
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+    zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragover'); if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
+    fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); });
+
+    function handleFile(file) {
+        selectedFile = file;
+        const reader = new FileReader();
+        reader.onload = e => { $('#previewImg').src = e.target.result; $('#previewWrap').style.display = 'block'; };
+        reader.readAsDataURL(file);
+        analyzeBtn.disabled = false;
+    }
+
+    analyzeBtn.addEventListener('click', async () => {
+        if (!selectedFile) return;
+        $('#loading').style.display = 'block';
+        $('#previewWrap').style.display = 'none';
+        analyzeBtn.disabled = true;
+
+        const fd = new FormData();
+        fd.append('file', selectedFile);
+        fd.append('prompt', $('#promptInput').value);
+
+        try {
+            const r = await fetch('/api/analyze', { method: 'POST', body: fd });
+            if (!r.ok) throw new Error(await r.text());
+            data = await r.json();
+            renderDashboard();
+        } catch (err) {
+            alert('Error: ' + err.message);
+        } finally {
+            $('#loading').style.display = 'none';
+            analyzeBtn.disabled = false;
+        }
+    });
+
+    function renderDashboard() {
+        $('#uploadSection').style.display = 'none';
+        $('#dashboard').style.display = 'block';
+        $('#backBtn').style.display = 'block';
+
+        $('#modelTag').textContent = data.model.split('/').pop();
+        $('#resultImg').src = 'data:image/png;base64,' + data.image;
+        $('#promptDisplay').innerHTML = '<strong style="color:#e2e8f0">Prompt:</strong> ' + data.prompt;
+
+        const head = $('#tableHead');
+        head.innerHTML = '<th class="row-hdr">Token</th>';
+        for (let i = 0; i < data.num_layers; i++) {
+            const th = document.createElement('th');
+            th.textContent = i + 1;
+            head.appendChild(th);
+        }
+
+        const body = $('#tableBody');
+        body.innerHTML = '';
+        const gs = data.image_size / data.patch_size;
+
+        for (let t = 0; t < data.token_labels.length; t++) {
+            const tr = document.createElement('tr');
+            const th = document.createElement('th');
+            th.className = 'row-hdr';
+            th.textContent = data.token_labels[t];
+            tr.appendChild(th);
+
+            if (data.image_mask[t]) {
+                tr.classList.add('img-row');
+                tr.style.display = 'none';
+            }
+
+            for (let l = 0; l < data.num_layers; l++) {
+                const td = document.createElement('td');
+                const preds = data.layer_data[l][t];
+                const top = preds[0];
+                td.textContent = top.t;
+                td.dataset.prob = top.p;
+                td.dataset.token = top.t.toLowerCase();
+                td.dataset.layer = l;
+                td.dataset.pos = t;
+                td.addEventListener('mouseenter', showTooltip);
+                td.addEventListener('mouseleave', hideTooltip);
+                tr.appendChild(td);
+            }
+
+            tr.addEventListener('mouseenter', () => highlightPatch(t));
+            tr.addEventListener('mouseleave', hideHighlight);
+            body.appendChild(tr);
+        }
+        applyHeatmap();
+    }
+
+    function showTooltip(e) {
+        const td = e.target;
+        const l = parseInt(td.dataset.layer);
+        const t = parseInt(td.dataset.pos);
+        const preds = data.layer_data[l][t];
+        const rect = td.getBoundingClientRect();
+
+        let html = `<div class="tooltip-header">Layer ${l + 1} / ${data.token_labels[t]}</div>`;
+        preds.forEach(p => {
+            const pct = (p.p * 100).toFixed(1);
+            html += `<div class="tooltip-row"><span>${p.t}</span><span>${pct}%</span></div>`;
+            html += `<div class="tooltip-bar"><div class="tooltip-fill" style="width:${pct}%"></div></div>`;
+        });
+
+        const tt = $('#tooltip');
+        tt.innerHTML = html;
+        tt.style.display = 'block';
+
+        let left = rect.right + 12;
+        let top = rect.top;
+        if (left + 240 > window.innerWidth) left = rect.left - 252;
+        if (top + 200 > window.innerHeight) top = window.innerHeight - 200;
+        tt.style.left = left + 'px';
+        tt.style.top = top + 'px';
+        td.style.outline = '1px solid #818cf8';
+    }
+
+    function hideTooltip(e) {
+        $('#tooltip').style.display = 'none';
+        if (e.target) e.target.style.outline = '';
+    }
+
+    function highlightPatch(t) {
+        const label = data.token_labels[t];
+        if (!label || !label.startsWith('<IMG')) { hideHighlight(); return; }
+        const idx = parseInt(label.replace('<IMG', '').replace('>', '')) - 1;
+        const gs = data.image_size / data.patch_size;
+        const hl = $('#patchHighlight');
+        hl.style.width = data.patch_size + 'px';
+        hl.style.height = data.patch_size + 'px';
+        hl.style.left = (idx % gs * data.patch_size) + 'px';
+        hl.style.top = (Math.floor(idx / gs) * data.patch_size) + 'px';
+        hl.style.display = 'block';
+    }
+
+    function hideHighlight() {
+        $('#patchHighlight').style.display = 'none';
+    }
+
+    function applyHeatmap() {
+        $$('.dash-table td').forEach(td => {
+            if (!heatmapOn) { td.style.backgroundColor = ''; return; }
+            const p = parseFloat(td.dataset.prob || 0);
+            const a = Math.max(0, p * 0.4);
+            td.style.backgroundColor = `rgba(129,140,248,${a})`;
+            td.className = p > 0.8 ? 'conf-high' : p > 0.3 ? 'conf-med' : 'conf-low';
+        });
+    }
+
+    $('#toggleImg').addEventListener('click', function() {
+        this.classList.toggle('active');
+        showImgTokens = this.classList.contains('active');
+        $$('.img-row').forEach(r => r.style.display = showImgTokens ? 'table-row' : 'none');
+    });
+
+    $('#toggleHeat').addEventListener('click', function() {
+        this.classList.toggle('active');
+        heatmapOn = this.classList.contains('active');
+        applyHeatmap();
+    });
+
+    $('#backBtn').addEventListener('click', () => {
+        $('#uploadSection').style.display = 'flex';
+        $('#dashboard').style.display = 'none';
+        $('#backBtn').style.display = 'none';
+        data = null;
+        selectedFile = null;
+        fileInput.value = '';
+        analyzeBtn.disabled = true;
+    });
+
+    $('#imgContainer').addEventListener('mousemove', e => {
+        if (!showImgTokens) return;
+        const rect = $('#imgContainer').getBoundingClientRect();
+        const gs = data.image_size / data.patch_size;
+        const col = Math.floor((e.clientX - rect.left) / data.patch_size);
+        const row = Math.floor((e.clientY - rect.top) / data.patch_size);
+        if (col >= gs || row >= gs) return;
+        const idx = row * gs + col + 1;
+        const label = '<IMG' + String(idx).padStart(3, '0') + '>';
+        const ti = data.token_labels.indexOf(label);
+        if (ti !== -1) highlightPatch(ti);
+    });
+
+    $('#imgContainer').addEventListener('mouseleave', hideHighlight);
+    </script>
+</body>
+</html>
