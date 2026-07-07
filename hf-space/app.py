@@ -1,11 +1,11 @@
 import base64
-import sys
 from io import BytesIO
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+try:
+    import spaces
+except ImportError:
+    spaces = None
 
-import spaces
 import torch
 import gradio as gr
 from PIL import Image
@@ -29,8 +29,9 @@ def load_model():
     )
     processor = AutoProcessor.from_pretrained(MODEL_NAME)
 
+_gpu_decorator = (lambda fn: fn) if spaces is None else spaces.GPU(duration=120)
 
-@spaces.GPU(duration=120)
+@_gpu_decorator
 def analyze_image_gpu(image: Image.Image, prompt: str):
     global model, processor
     if model is None:
@@ -274,5 +275,3 @@ with demo:
         return build_dashboard(img_b64, result, prompt)
 
     analyze_btn.click(fn=run_analysis, inputs=[image_input, prompt_input], outputs=[result_html])
-
-demo.launch()
