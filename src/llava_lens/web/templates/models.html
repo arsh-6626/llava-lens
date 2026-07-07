@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% set page = "models" %}
+{% block title %}Models - LLAVA-LENS{% endblock %}
+{% block topbar_title %}Models{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:24px;">
+    <div class="card-header">
+        <div>
+            <div class="card-title">Available Models</div>
+            <div class="card-subtitle">Register and manage VLM models</div>
+        </div>
+    </div>
+
+    <div id="modelsContainer">
+        <div style="text-align:center;padding:40px;color:var(--text-muted);">Loading...</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title" style="margin-bottom:16px;">Register Custom Model</div>
+    <div class="grid grid-2">
+        <div class="form-group">
+            <label class="form-label">Model Name</label>
+            <input type="text" class="form-input" id="modelName" placeholder="my-custom-model">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Model Class</label>
+            <input type="text" class="form-input" id="modelClass" placeholder="MyModelWrapper">
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input" id="modelDesc" rows="2" placeholder="Brief description of the model..."></textarea>
+    </div>
+    <button class="btn btn-secondary" onclick="showToast('Register models via CLI: llava-lens models')">
+        Register via CLI
+    </button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+fetch('/api/models').then(r => r.json()).then(d => {
+    const container = document.getElementById('modelsContainer');
+    if (!d.models || d.models.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);">No models registered</div>';
+        return;
+    }
+
+    let html = '<div class="table-wrap"><table><thead><tr><th>Model Name</th><th>Status</th><th>Type</th><th>Actions</th></tr></thead><tbody>';
+    d.models.forEach(name => {
+        html += `<tr>
+            <td><code style="color:var(--accent-light)">${name}</code></td>
+            <td><span class="badge badge-success">Available</span></td>
+            <td style="color:var(--text-muted)">VLM Wrapper</td>
+            <td><button class="btn btn-ghost btn-sm" onclick="showToast('Model: ${name}')">Details</button></td>
+        </tr>`;
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+});
+</script>
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% set page = "runs" %}
+{% block title %}Experiment Runs - LLAVA-LENS{% endblock %}
+{% block topbar_title %}Experiment Runs{% endblock %}
+
+{% block topbar_actions %}
+<input type="text" class="form-input" style="width:200px;" placeholder="Search runs..." id="searchRuns">
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="card-title">All Runs</div>
+            <div class="card-subtitle">Track and compare experiment results</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="loadRuns()">Refresh</button>
+    </div>
+
+    <div id="runsContainer">
+        <div style="text-align:center;padding:60px;color:var(--text-muted);">
+            <div class="spinner" style="margin:0 auto 16px;"></div>
+            Loading runs...
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top:24px;display:none;" id="runDetail">
+    <div class="card-header">
+        <div class="card-title" id="detailTitle">Run Details</div>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('runDetail').style.display='none'">Close</button>
+    </div>
+    <div id="detailContent"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function loadRuns() {
+    fetch('/api/runs?limit=100').then(r => r.json()).then(d => {
+        const container = document.getElementById('runsContainer');
+        if (!d.runs || d.runs.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-muted);">No runs found. Start by analyzing an image.</div>';
+            return;
+        }
+
+        let html = '<div class="table-wrap"><table><thead><tr><th>Run ID</th><th>Name</th><th>Model</th><th>Status</th><th>Started</th><th>Duration</th><th>Actions</th></tr></thead><tbody>';
+        d.runs.forEach(run => {
+            const duration = run.end_time ?
+                ((new Date(run.end_time) - new Date(run.start_time)) / 1000).toFixed(1) + 's' : '-';
+            html += `<tr>
+                <td><code style="color:var(--accent-light)">${run.run_id}</code></td>
+                <td>${run.name || '-'}</td>
+                <td style="font-size:12px;color:var(--text-muted)">${run.model_name || '-'}</td>
+                <td>${statusBadge(run.status)}</td>
+                <td style="font-size:12px;color:var(--text-muted)">${formatTime(run.start_time)}</td>
+                <td style="font-size:12px;color:var(--text-muted)">${duration}</td>
+                <td>
+                    <button class="btn btn-ghost btn-sm" onclick="viewRun('${run.run_id}')">View</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteRun('${run.run_id}')">Delete</button>
+                </td>
+            </tr>`;
+        });
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+    });
+}
+
+function viewRun(runId) {
+    fetch(`/api/runs/${runId}`).then(r => r.json()).then(run => {
+        const detail = document.getElementById('runDetail');
+        detail.style.display = 'block';
+        document.getElementById('detailTitle').textContent = `Run: ${run.run_id}`;
+
+        let html = '<div class="grid grid-2" style="gap:16px;">';
+        html += `<div><strong>Name:</strong> ${run.name || '-'}</div>`;
+        html += `<div><strong>Status:</strong> ${statusBadge(run.status)}</div>`;
+        html += `<div><strong>Model:</strong> ${run.model_name || '-'}</div>`;
+        html += `<div><strong>Started:</strong> ${formatTime(run.start_time)}</div>`;
+        html += `<div><strong>Ended:</strong> ${formatTime(run.end_time)}</div>`;
+        html += `<div><strong>Tags:</strong> ${(run.tags || []).join(', ') || '-'}</div>`;
+        html += '</div>';
+
+        if (run.config && Object.keys(run.config).length > 0) {
+            html += '<div style="margin-top:16px;"><strong>Config:</strong><pre style="margin-top:8px;padding:12px;background:var(--bg-tertiary);border-radius:8px;font-size:12px;overflow-x:auto;">' + JSON.stringify(run.config, null, 2) + '</pre></div>';
+        }
+
+        document.getElementById('detailContent').innerHTML = html;
+        detail.scrollIntoView({ behavior: 'smooth' });
+    });
+}
+
+function deleteRun(runId) {
+    if (!confirm('Delete this run?')) return;
+    fetch(`/api/runs/${runId}`, { method: 'DELETE' }).then(() => {
+        showToast('Run deleted');
+        loadRuns();
+    });
+}
+
+document.getElementById('searchRuns').addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase();
+    document.querySelectorAll('#runsContainer tr').forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(query) ? '' : 'none';
+    });
+});
+
+loadRuns();
+</script>
+{% endblock %}

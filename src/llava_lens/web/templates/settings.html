@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% set page = "settings" %}
+{% block title %}Settings - LLAVA-LENS{% endblock %}
+{% block topbar_title %}Settings{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+    <div class="card">
+        <div class="card-title" style="margin-bottom:20px;">Model Configuration</div>
+
+        <div class="form-group">
+            <label class="form-label">Model Name</label>
+            <input type="text" class="form-input" id="modelName" value="llava-hf/llava-1.5-7b-hf">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Device</label>
+            <select class="form-input" id="device">
+                <option value="auto">Auto (Best Available)</option>
+                <option value="cuda:0">CUDA:0</option>
+                <option value="cuda:1">CUDA:1</option>
+                <option value="cpu">CPU</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Quantization</label>
+            <select class="form-input" id="quantize">
+                <option value="fp16">FP16</option>
+                <option value="4bit">4-bit (QLoRA)</option>
+                <option value="8bit">8-bit</option>
+                <option value="none">None (Full Precision)</option>
+            </select>
+        </div>
+
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label class="form-label">Image Size</label>
+                <input type="number" class="form-input" id="imageSize" value="336">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Patch Size</label>
+                <input type="number" class="form-input" id="patchSize" value="14">
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title" style="margin-bottom:20px;">Analysis Settings</div>
+
+        <div class="form-group">
+            <label class="form-label">Top K Predictions</label>
+            <input type="number" class="form-input" id="topK" value="5">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Confidence Threshold</label>
+            <input type="number" class="form-input" id="confThreshold" value="0.01" step="0.001">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Head Aggregation</label>
+            <select class="form-input" id="headAgg">
+                <option value="mean">Mean</option>
+                <option value="max">Max</option>
+                <option value="sum">Sum</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Layer Aggregation</label>
+            <select class="form-input" id="layerAgg">
+                <option value="last">Last Layer</option>
+                <option value="mean">Mean</option>
+                <option value="sum">Sum</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top:24px;">
+    <div class="card-title" style="margin-bottom:20px;">System</div>
+    <div class="grid grid-3">
+        <div style="padding:16px;background:var(--bg-tertiary);border-radius:8px;">
+            <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;">Storage</div>
+            <div style="font-size:14px;margin-top:4px;">./data</div>
+        </div>
+        <div style="padding:16px;background:var(--bg-tertiary);border-radius:8px;">
+            <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;">Tracking DB</div>
+            <div style="font-size:14px;margin-top:4px;">./data/tracking.db</div>
+        </div>
+        <div style="padding:16px;background:var(--bg-tertiary);border-radius:8px;">
+            <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;">Cache</div>
+            <div style="font-size:14px;margin-top:4px;">./data/.cache</div>
+        </div>
+    </div>
+
+    <div style="margin-top:20px;display:flex;gap:12px;">
+        <button class="btn btn-secondary" onclick="showToast('Settings saved locally')">Save Settings</button>
+        <button class="btn btn-danger" onclick="if(confirm('Clear all cache?'))showToast('Cache cleared')">Clear Cache</button>
+        <button class="btn btn-danger" onclick="if(confirm('Clean all storage?'))showToast('Storage cleaned')">Clean Storage</button>
+    </div>
+</div>
+{% endblock %}

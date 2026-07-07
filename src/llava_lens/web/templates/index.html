@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% set page = "home" %}
+{% block title %}Dashboard - LLAVA-LENS{% endblock %}
+{% block topbar_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="grid grid-4" style="margin-bottom:32px;">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(99,102,241,0.1);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
+        </div>
+        <div class="stat-value" id="totalRuns">-</div>
+        <div class="stat-label">Total Runs</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(34,197,94,0.1);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
+        </div>
+        <div class="stat-value" id="completedRuns">-</div>
+        <div class="stat-label">Completed</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(239,68,68,0.1);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        </div>
+        <div class="stat-value" id="failedRuns">-</div>
+        <div class="stat-label">Failed</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(245,158,11,0.1);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <div class="stat-value" id="modelStatus">-</div>
+        <div class="stat-label">Model</div>
+    </div>
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <div class="card-title">Quick Analysis</div>
+                <div class="card-subtitle">Upload an image for instant Logit Lens analysis</div>
+            </div>
+            <a href="/analyze" class="btn btn-primary btn-sm">Open Analyzer</a>
+        </div>
+        <div class="upload-zone" id="quickUpload" style="padding:40px;">
+            <div class="upload-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+            </div>
+            <div class="upload-title">Drop image here</div>
+            <div class="upload-subtitle">or click to browse</div>
+        </div>
+        <input type="file" id="quickFileInput" accept="image/*" hidden>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <div class="card-title">Recent Runs</div>
+                <div class="card-subtitle">Latest experiment history</div>
+            </div>
+            <a href="/runs" class="btn btn-ghost btn-sm">View All</a>
+        </div>
+        <div id="recentRuns">
+            <div style="text-align:center;padding:40px;color:var(--text-muted);">Loading...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+fetch('/api/runs?limit=5').then(r => r.json()).then(d => {
+    const container = document.getElementById('recentRuns');
+    if (!d.runs || d.runs.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);">No runs yet. Start by analyzing an image.</div>';
+        return;
+    }
+    let html = '<div class="table-wrap"><table><thead><tr><th>Run ID</th><th>Name</th><th>Status</th><th>Time</th></tr></thead><tbody>';
+    d.runs.forEach(run => {
+        html += `<tr><td><code style="color:var(--accent-light)">${run.run_id}</code></td><td>${run.name || '-'}</td><td>${statusBadge(run.status)}</td><td style="color:var(--text-muted)">${formatTime(run.start_time)}</td></tr>`;
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+
+    document.getElementById('totalRuns').textContent = d.runs.length;
+    document.getElementById('completedRuns').textContent = d.runs.filter(r => r.status === 'completed').length;
+    document.getElementById('failedRuns').textContent = d.runs.filter(r => r.status === 'failed').length;
+});
+
+fetch('/api/health').then(r => r.json()).then(d => {
+    document.getElementById('modelStatus').textContent = d.model_loaded ? 'Ready' : 'Loading';
+});
+
+initUploadZone(
+    document.getElementById('quickUpload'),
+    document.getElementById('quickFileInput'),
+    null,
+    (file) => { window.location.href = '/analyze'; }
+);
+</script>
+{% endblock %}

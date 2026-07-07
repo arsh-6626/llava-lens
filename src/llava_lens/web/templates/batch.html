@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% set page = "batch" %}
+{% block title %}Batch Processing - LLAVA-LENS{% endblock %}
+{% block topbar_title %}Batch Processing{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+    <div class="card">
+        <div class="card-title" style="margin-bottom:16px;">Batch Configuration</div>
+
+        <div class="form-group">
+            <label class="form-label">Image Directory Path</label>
+            <input type="text" class="form-input" id="imageDir" placeholder="/path/to/images">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Prompt</label>
+            <input type="text" class="form-input" id="batchPrompt" value="Describe the image.">
+        </div>
+
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label class="form-label">Batch Size</label>
+                <input type="number" class="form-input" id="batchSize" value="1" min="1" max="16">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Max Items</label>
+                <input type="number" class="form-input" id="maxItems" placeholder="All">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Output Directory</label>
+            <input type="text" class="form-input" id="outputDir" value="./results">
+        </div>
+
+        <button class="btn btn-primary" style="width:100%;" id="startBatchBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21 5,3"/></svg>
+            Start Batch Processing
+        </button>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Progress</div>
+            <span class="badge badge-info" id="batchStatus">Idle</span>
+        </div>
+
+        <div style="margin-bottom:20px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-size:13px;color:var(--text-secondary);">Progress</span>
+                <span style="font-size:13px;color:var(--text-muted);" id="progressText">0%</span>
+            </div>
+            <div style="height:6px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;">
+                <div id="progressBar" style="height:100%;background:linear-gradient(90deg,var(--accent),#8b5cf6);width:0%;transition:width 0.3s;border-radius:3px;"></div>
+            </div>
+        </div>
+
+        <div class="grid grid-2" style="gap:12px;margin-bottom:20px;">
+            <div style="padding:12px;background:var(--bg-tertiary);border-radius:8px;">
+                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Processed</div>
+                <div style="font-size:20px;font-weight:700;" id="processedCount">0</div>
+            </div>
+            <div style="padding:12px;background:var(--bg-tertiary);border-radius:8px;">
+                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Failed</div>
+                <div style="font-size:20px;font-weight:700;color:var(--error);" id="failedCount">0</div>
+            </div>
+        </div>
+
+        <div style="padding:12px;background:var(--bg-tertiary);border-radius:8px;">
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Speed</div>
+            <div style="font-size:16px;font-weight:600;" id="speedText">- img/s</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('startBatchBtn').addEventListener('click', () => {
+    showToast('Batch processing requires CLI. Run: llava-lens batch <directory>', 'info');
+});
+</script>
+{% endblock %}
